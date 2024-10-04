@@ -8,6 +8,7 @@ import os
 
 # Initialize the Dash app with a Bootstrap theme
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+server = app.server
 
 # Paths to the relevant folders
 DATA_PATH = 'data/Afghanistan.csv'
