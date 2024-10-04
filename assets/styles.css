@@ -1,0 +1,61 @@
+/* General body styling for clean, minimal look */
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background-color: rgb(17, 17, 17);
+    color: whitesmoke;
+    margin: 0;
+    padding: 0;
+}
+
+/* Container for main content to center everything */
+.container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 2px;
+}
+
+/* Styling for headers */
+h1, h2 {
+    font-weight: 600;
+    color: whitesmoke;
+    margin-bottom: 10px;
+    margin-left: 10px;
+    margin-top: 10px;
+}
+
+h1 {
+    text-align: center;
+    font-size: 36px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    text-align: left;
+    font-size: 24px;
+    margin-bottom: 15px;
+    margin-top: 20px;
+}
+
+h3 {
+    text-align: left;
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+.dcc-dropdown > .Select-control {
+    width:100% !important;
+    border: 2px solid rgb(50, 50, 50);
+    border-radius:20px;
+    background-color: rgb(140, 140, 140);
+ }
+
+ /* Menu list options */
+.dcc-dropdown > [class*="menu"] {
+    background-color: rgb(140, 140, 140);
+    color: rgb(0, 0, 0);
+}
+
+/* Single selected value */
+.dcc-dropdown [class*="singleValue"] {
+    color: rgb(0, 0, 0);
+}
