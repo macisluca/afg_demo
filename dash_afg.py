@@ -5,9 +5,12 @@ from dash.dependencies import Input, Output
 import plotly.express as px
 import pandas as pd
 import os
+import numpy as np
+import re
 
 # Initialize the Dash app with a Bootstrap theme
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+server = app.server
 
 # Paths to the relevant folders
 DATA_PATH = 'data/Afghanistan.csv'
@@ -31,7 +34,7 @@ default_date = available_dates[-1]
 
 # Column dropdown options
 unavailable_cols = ['event_date', 'country', 'ISO_3', 'capital_lat', 'capital_lon', 'month', 'quarter', 'week']
-unavailable_table_cols = ['country', 'month', 'quarter', 'week']
+unavailable_table_cols = ['country', 'month', 'quarter', 'week', 'event_date', 'capital_lat', 'capital_lon', 'ISO_3']
 column_options = [{'label': col, 'value': col} for col in data.columns if col not in unavailable_cols]
 vi_avg_column_options = [{'label': 'Violence index 1 Year moving average', 'value': col} for col in ['violence index_moving_avg'] if col not in unavailable_cols]
 
@@ -58,11 +61,11 @@ monitoring_layout = html.Div([
         dcc.Dropdown(id='evolution-column', options=column_options, value='violence index', clearable=False, className='dcc-dropdown'),
         dcc.Graph(id='line-plot', className='dcc-graph'),
         html.H2('Afghanistan Weekly Stats by Date'),
-        dcc.Dropdown(id='plot-date', options=[{'label': date, 'value': date} for date in available_dates], value=default_date, clearable=False, className='dcc-dropdown'),
+        dcc.Dropdown(id='plot-date', options=[{'label': str(date)[:10], 'value': date} for date in available_dates], value=default_date, clearable=False, className='dcc-dropdown'),
         dash_table.DataTable(id='data-table',
             style_data={'color': 'white','backgroundColor': 'rgb(50, 50, 50)'},
             style_header={'backgroundColor': 'rgb(30, 30, 30)', 'color': 'white', 'fontWeight': 'bold'},
-            style_cell={'height': 'auto', 'minWidth': '90px', 'width': '180px', 'maxWidth': '180px', 'whiteSpace': 'normal'}
+            style_cell={'textAlign': 'left', 'height': 'auto', 'minWidth': '90px', 'width': '180px', 'maxWidth': '180px', 'whiteSpace': 'normal'}
         ),
     ]),
 ])
@@ -105,28 +108,33 @@ def display_page(pathname):
     [Input('map-date', 'value')]
 )
 
+
 def update_event_map(selected_date):
     # Filter data for the selected date
     filtered_df = event_data[event_data['event_date'] == selected_date]
 
     # Group by latitude, longitude, and event_type
     grouped = filtered_df.groupby(['latitude', 'longitude', 'event_type']).agg(
-        count=('event_type', 'size'),  # Count the number of events in the group
+        numerosity=('event_type', 'size'),  # Count the number of events in the group
         fatalities=('fatalities', 'sum'),  # Sum the fatalities for each group
-        actor1=('actor1', lambda x: ', '.join(sorted(set(x)))),  # Concatenate unique actor1 values
-        admin1=('admin1', lambda x: ', '.join(sorted(set(x)))),  # Concatenate unique admin1 values
-        admin2=('admin2', lambda x: ', '.join(sorted(set(x)))),  # Concatenate unique admin2 values
-        sub_event_type=('sub_event_type', lambda x: ', '.join(sorted(set(x))))   # Concatenate unique admin2 values
+        actors=('actor1', lambda x: ', '.join(sorted(set(x)))),  # Concatenate unique actor1 values
+        #admin1=('admin1', lambda x: ', '.join(sorted(set(x)))),  # Concatenate unique admin1 values
+        #admin2=('admin2', lambda x: ', '.join(sorted(set(x)))),  # Concatenate unique admin2 values
+        events=('sub_event_type', lambda x: ', '.join(sorted(set(x)))),   # Concatenate unique sub_event_type values
+        description=('notes', lambda x: '/'.join(sorted(set(x)))),   # Concatenate unique notes values
     ).reset_index()
+
+    # Apply the function to the 'description' column
+    grouped['description'] = grouped['description'].apply(add_br_to_description)
 
     # Generate map with Plotly Express
     fig = px.scatter_mapbox(grouped,
                             lat='latitude',
                             lon='longitude',
-                            size='count',  # Circle size based on count
+                            size='numerosity',  # Circle size based on count
                             color='event_type',  # Color based on event_type
                             hover_name='event_type',
-                            hover_data={'count': True, 'event_type': False, 'latitude': False, 'longitude': False, 'sub_event_type': True, 'actor1': True, 'fatalities':True, 'admin1': True, 'admin2': True},
+                            hover_data={'actors': True, 'events': True, 'numerosity': True, 'fatalities':True, 'description':True, 'event_type': False, 'latitude': False, 'longitude': False},
                             zoom=5,
                             opacity=0.5,
                             template='plotly_dark')
@@ -136,6 +144,20 @@ def update_event_map(selected_date):
 
     return [fig]
 
+
+def add_br_to_description(description):
+    # First, add <br><br> after every `/`
+    description_with_slashes = description.replace('/', '<br><br>')
+    
+    # Insert <br> at the first space after every 50 characters
+    def insert_br_at_space(text, limit):
+        pattern = r'(.{'+str(limit)+r'}\S*)\s'  # Match at least 'limit' characters, followed by a space
+        return re.sub(pattern, r'\1<br> ', text)  # Replace the match with the text and insert <br> before the space
+
+    # Apply the function, inserting <br> after 50 characters
+    description_with_breaks = insert_br_at_space(description_with_slashes, 50)
+
+    return description_with_breaks
 
 # Callback for line plot and data table
 @app.callback(
@@ -194,15 +216,22 @@ def update_line_plot_and_table(selected_column, plot_date):
     for col in data.columns:
         if col in unavailable_table_cols:
             continue
-        new_row = {'Country': col}
-        new_row['Afghanistan'] = table_data[0][col]
-        new_table_data.append(new_row)
+        string_col = col.replace("_", ": ")
+        string_col = string_col.replace("/", ", ")
+        string_col = 'Violence index 1 Year moving average' if col == 'violence index_moving_avg' else string_col
+        new_row = {'Country': string_col}
+        new_row['Afghanistan'] = np.round(table_data[0][col],0)
+        if table_data[0][col] not in [0, '0']:
+            new_table_data.append(new_row)
     
     columns_default = [{'name':'Country', 'id':'Country'}]
     columns = [{'name':'Afghanistan', 'id':'Afghanistan'}]
     columns = columns_default + columns
 
-    return line_fig, new_table_data, columns
+    # Order columns based on values
+    sorted_data = sorted(new_table_data, key=lambda x: x['Afghanistan'], reverse=True)
+
+    return line_fig, sorted_data, columns
     
 
 
