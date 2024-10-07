@@ -54,18 +54,24 @@ navbar = dbc.NavbarSimple(
 monitoring_layout = html.Div([
     html.H1('Monitoring Dashboard'),
     html.Div(className='container', children=[
-        html.H2('Afghanistan Events Over Time'),
+        html.H2('Afghanistan Daily Events Map'),
+        html.H3('Select a date, and the map will display the events that occurred on that day.'),
         dcc.Dropdown(id='map-date', options=[{'label': date, 'value': date} for date in available_event_dates], value=default_event_date, clearable=False, className='dcc-dropdown'),
         dcc.Graph(id='event-map', className='dcc-graph'),
-        html.H2('Afghanistan Data Over Time'),
-        dcc.Dropdown(id='evolution-column', options=column_options, value='violence index', clearable=False, className='dcc-dropdown'),
-        dcc.Graph(id='line-plot', className='dcc-graph'),
         html.H2('Afghanistan Weekly Stats by Date'),
+        dcc.Dropdown(id='evolution-column', options=column_options, value='violence index', clearable=False, className='dcc-dropdown'),
+        html.H3('Choose a date, and the white dot will indicate the selected week. Additionally, the table below the plot will display the statistics for that week.'),
         dcc.Dropdown(id='plot-date', options=[{'label': str(date)[:10], 'value': date} for date in available_dates], value=default_date, clearable=False, className='dcc-dropdown'),
+        dcc.Graph(id='line-plot', className='dcc-graph'),
         dash_table.DataTable(id='data-table',
             style_data={'color': 'white','backgroundColor': 'rgb(50, 50, 50)'},
             style_header={'backgroundColor': 'rgb(30, 30, 30)', 'color': 'white', 'fontWeight': 'bold'},
-            style_cell={'textAlign': 'left', 'height': 'auto', 'minWidth': '90px', 'width': '180px', 'maxWidth': '180px', 'whiteSpace': 'normal'}
+            style_cell={'textAlign': 'left', 'height': 'auto', 'minWidth': '90px', 'width': '180px', 'maxWidth': '180px', 'whiteSpace': 'normal'},
+            # Add conditional styling for rows with "violence index"
+            style_data_conditional=[
+                {'if': {'filter_query': '{Country} contains "index"'},
+                 'color':'rgb(255, 200, 200)','backgroundColor': 'rgb(60, 50, 50)'}
+                 ]
         ),
     ]),
 ])
@@ -206,6 +212,9 @@ def update_line_plot_and_table(selected_column, plot_date):
     line_fig.add_scatter(x=['2021-08-15'], y=[y_value], mode='markers',
                             marker=dict(color='red', size=15, symbol='star'),
                             name='Taliban enter Kabul')
+    
+    # Update the layout to disable zoom, pan, and drag
+    line_fig.update_layout(dragmode=False)
     
     # Prepare the table data for the selected countries
     table_data = []
