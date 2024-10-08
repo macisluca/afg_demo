@@ -14,9 +14,11 @@ server = app.server
 
 # Paths to the relevant folders
 DATA_PATH = 'data/Afghanistan.csv'
-#FORECAST_PATH = 'models/TiDE/predictions/sampling/'
-#FORECAST_HTML_PATH = 'docs/figures/operative/TiDE/default/'
-#ISO3_PATH = 'data/raw/ACLED_coverage_ISO3.csv'
+FORECAST_PATH = 'models/TiDE/predictions/sampling/'
+FORECAST_HTML_PATH = 'plots/'
+
+# models
+models = ['ensemble', 'TiDE', 'SmarTransformer']
 
 # Load initial data
 data = pd.read_csv(DATA_PATH)
@@ -42,7 +44,7 @@ vi_avg_column_options = [{'label': 'Violence index 1 Year moving average', 'valu
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Monitoring", href="/monitoring")),
-        #dbc.NavItem(dbc.NavLink("Forecasting", href="/forecasting")),
+        dbc.NavItem(dbc.NavLink("Forecasting", href="/forecasting")),
     ],
     brand="Dashboard",
     brand_href="/",
@@ -79,17 +81,11 @@ monitoring_layout = html.Div([
 # Forecasting layout
 forecasting_layout = html.Div([
     html.H1('Forecasting Dashboard'),
-    html.H3('Select forecasted week:'),
-    dcc.Slider(id='forecast-slider', min=0, max=11, step=1, value=0, marks={i: f'Forecast {i+1}' for i in range(12)}),
-    html.H3('Select outcome level:'),
-    dcc.Slider(id='percentile-slider', min=0, max=100, step=1, value=50, marks={i: str(i) for i in range(0, 101, 10)}),
-    dcc.Graph(id='forecast-bar-plot', className='dcc-graph'),
-    html.H3('Select number of countries:'),
-    dcc.Slider(id='num-forecasted-countries', min=10, max=160, step=10, value=10, marks={i: str(i) for i in range(10, 160, 10)}),
-    dcc.Graph(id='forecast-world-map', className='dcc-graph'),
-    html.H2('Select Country Forecasts'),
-    dcc.Dropdown(id='forecast-country', options=[{'label': c, 'value': c} for c in sorted(data['country'].unique())], value='Afghanistan', clearable=False, className='dcc-dropdown'),
-    html.Iframe(id='forecast-line-plot', style={'width': '100%', 'height': '600px'}),
+    html.H2('Select Model Forecasts'),
+    dcc.Dropdown(id='forecast-model', options=[{'label': m, 'value': m} for m in models], value='ensemble', clearable=False, className='dcc-dropdown'),
+    html.Iframe(id='forecast-line-plot',
+                style={'width': '100%', 'height': '1600px'}
+                ),
 ])
 
 # Main layout
@@ -113,7 +109,6 @@ def display_page(pathname):
     [Output('event-map', 'figure')],  # Expecting a list or tuple of outputs
     [Input('map-date', 'value')]
 )
-
 
 def update_event_map(selected_date):
     # Filter data for the selected date
@@ -149,7 +144,6 @@ def update_event_map(selected_date):
     fig.update_layout(mapbox_style="carto-positron", margin={"r": 0, "t": 0, "l": 0, "b": 0})
 
     return [fig]
-
 
 def add_br_to_description(description):
     # First, add <br><br> after every `/`
@@ -243,7 +237,20 @@ def update_line_plot_and_table(selected_column, plot_date):
     return line_fig, sorted_data, columns
     
 
+@app.callback(
+    Output('forecast-line-plot', 'srcDoc'),  # Now returning the HTML content as 'srcDoc'
+    [Input('forecast-model', 'value')]
+)
+def update_forecast_map(forecast_model):
+    # Path to the HTML file
+    map_path = f"plots/Afghanistan_{forecast_model}.html"
+    
+    # Read and return the HTML content
+    with open(map_path, 'r') as f:
+        html_content = f.read()
+    
+    return html_content
 
 # Start the app
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)
