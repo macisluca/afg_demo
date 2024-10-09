@@ -18,7 +18,7 @@ FORECAST_PATH = 'models/TiDE/predictions/sampling/'
 FORECAST_HTML_PATH = 'plots/'
 
 # models
-models = ['ensemble', 'TiDE', 'SmarTransformer']
+models = ['Ensemble', 'TiDE', 'SmarTransformer']
 
 # Load initial data
 data = pd.read_csv(DATA_PATH)
@@ -35,8 +35,8 @@ available_dates = sorted(data['event_date'].unique())
 default_date = available_dates[-1]
 
 # Column dropdown options
-unavailable_cols = ['event_date', 'country', 'ISO_3', 'capital_lat', 'capital_lon', 'month', 'quarter', 'week']
-unavailable_table_cols = ['country', 'month', 'quarter', 'week', 'event_date', 'capital_lat', 'capital_lon', 'ISO_3']
+unavailable_cols = ['event_date', 'country', 'ISO_3', 'capital_lat', 'capital_lon', 'month', 'quarter', 'week','Legislative','Local','General','Parliamentary','Presidential','Referendum','holiday']
+unavailable_table_cols = ['country', 'month', 'quarter', 'week', 'event_date', 'capital_lat', 'capital_lon', 'ISO_3','Legislative','Local','General','Parliamentary','Presidential','Referendum','holiday']
 column_options = [{'label': col, 'value': col} for col in data.columns if col not in unavailable_cols]
 vi_avg_column_options = [{'label': 'Violence index 1 Year moving average', 'value': col} for col in ['violence index_moving_avg'] if col not in unavailable_cols]
 
@@ -44,7 +44,7 @@ vi_avg_column_options = [{'label': 'Violence index 1 Year moving average', 'valu
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Monitoring", href="/monitoring")),
-        dbc.NavItem(dbc.NavLink("Forecasting", href="/forecasting")),
+        dbc.NavItem(dbc.NavLink("Forecasting Test", href="/forecasting")),
     ],
     brand="Dashboard",
     brand_href="/",
@@ -61,10 +61,14 @@ monitoring_layout = html.Div([
         dcc.Dropdown(id='map-date', options=[{'label': date, 'value': date} for date in available_event_dates], value=default_event_date, clearable=False, className='dcc-dropdown'),
         dcc.Graph(id='event-map', className='dcc-graph'),
         html.H2('Afghanistan Weekly Stats by Date'),
+        html.H3('Select a variable, and the map will display its evolution over time.'),
         dcc.Dropdown(id='evolution-column', options=column_options, value='violence index', clearable=False, className='dcc-dropdown'),
         html.H3('Choose a date, and the white dot will indicate the selected week. Additionally, the table below the plot will display the statistics for that week.'),
         dcc.Dropdown(id='plot-date', options=[{'label': str(date)[:10], 'value': date} for date in available_dates], value=default_date, clearable=False, className='dcc-dropdown'),
         dcc.Graph(id='line-plot', className='dcc-graph'),
+        html.P('The Violence Index 1-Year Moving Average illustrates a smoother trend of the Violence Index over time by calculating the average of the last 52 weeks. This moving average provides a clearer view of long-term patterns, as it incorporates not just the current week\'s data but also the 51 preceding weeks. By selecting \'violence index_moving_avg\' from the variables dropdown, you can better observe the index\'s evolution, including its peak during the period when the Taliban entered Kabul. This allows for a more stable and insightful representation of the underlying trends.',
+               style={'fontSize': '16px', 'margin': '20px'}),
+        html.H3('Numerosity of events in the selected week:'),
         dash_table.DataTable(id='data-table',
             style_data={'color': 'white','backgroundColor': 'rgb(50, 50, 50)'},
             style_header={'backgroundColor': 'rgb(30, 30, 30)', 'color': 'white', 'fontWeight': 'bold'},
@@ -80,12 +84,16 @@ monitoring_layout = html.Div([
 
 # Forecasting layout
 forecasting_layout = html.Div([
-    html.H1('Forecasting Dashboard'),
+    html.H1('Forecasting Test Dashboard'),
     html.H2('Select Model Forecasts'),
-    dcc.Dropdown(id='forecast-model', options=[{'label': m, 'value': m} for m in models], value='ensemble', clearable=False, className='dcc-dropdown'),
+    dcc.Dropdown(id='forecast-model', options=[{'label': m, 'value': m} for m in models], value='Ensemble', clearable=False, className='dcc-dropdown'),
+        # Add text below the plot
+    html.P("The forecast test predictions start from July 2nd, 2021, until August 20th, 2021, in Afghanistan. Each date corresponds to the beginning day of the predicted week.",
+           style={'fontSize': '16px', 'margin': '20px'}),
     html.Iframe(id='forecast-line-plot',
                 style={'width': '100%', 'height': '1600px'}
                 ),
+
 ])
 
 # Main layout
@@ -253,4 +261,4 @@ def update_forecast_map(forecast_model):
 
 # Start the app
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
