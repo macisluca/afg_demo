@@ -7,6 +7,7 @@ import pandas as pd
 import os
 import numpy as np
 import re
+from datetime import datetime
 
 # Initialize the Dash app with a Bootstrap theme
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
@@ -52,19 +53,42 @@ navbar = dbc.NavbarSimple(
     dark=True,
 )
 
+def transform_date_to_day_first(date_input):
+    """
+    Transforms a date input into the format DD/MM/YYYY.
+    
+    :param date_input: A date string or datetime object.
+    :return: A string representing the date in DD/MM/YYYY format.
+    """
+    # If the input is a string, convert it to a datetime object
+    if isinstance(date_input, str):
+        try:
+            # Attempt to parse the string in a common format (e.g., YYYY-MM-DD)
+            date_obj = datetime.strptime(date_input, "%Y-%m-%d")
+        except ValueError:
+            return "Invalid date format. Please use YYYY-MM-DD format."
+    elif isinstance(date_input, datetime):
+        date_obj = date_input
+    else:
+        return "Invalid input. Please provide a string or datetime object."
+
+    # Return the date formatted as DD/MM/YYYY
+    return date_obj.strftime("%d/%m/%Y")
+
+
 # Monitoring layout
 monitoring_layout = html.Div([
     html.H1('Monitoring Dashboard'),
     html.Div(className='container', children=[
         html.H2('Afghanistan Daily Events Map'),
         html.H3('Select a date, and the map will display the events that occurred on that day.'),
-        dcc.Dropdown(id='map-date', options=[{'label': date, 'value': date} for date in available_event_dates], value=default_event_date, clearable=False, className='dcc-dropdown'),
+        dcc.Dropdown(id='map-date', options=[{'label': transform_date_to_day_first(date), 'value': date} for date in available_event_dates], value=default_event_date, clearable=False, className='dcc-dropdown'),
         dcc.Graph(id='event-map', className='dcc-graph'),
         html.H2('Afghanistan Weekly Stats by Date'),
         html.H3('Select a variable, and the map will display its evolution over time.'),
         dcc.Dropdown(id='evolution-column', options=column_options, value='violence index', clearable=False, className='dcc-dropdown'),
         html.H3('Choose a date, and the white dot will indicate the selected week. Additionally, the table below the plot will display the statistics for that week.'),
-        dcc.Dropdown(id='plot-date', options=[{'label': str(date)[:10], 'value': date} for date in available_dates], value=default_date, clearable=False, className='dcc-dropdown'),
+        dcc.Dropdown(id='plot-date', options=[{'label': transform_date_to_day_first(date), 'value': date} for date in available_dates], value=default_date, clearable=False, className='dcc-dropdown'),
         dcc.Graph(id='line-plot', className='dcc-graph'),
         html.P('The Violence Index 1-Year Moving Average illustrates a smoother trend of the Violence Index over time by calculating the average of the last 52 weeks. This moving average provides a clearer view of long-term patterns, as it incorporates not just the current week\'s data but also the 51 preceding weeks. By selecting \'violence index_moving_avg\' from the variables dropdown, you can better observe the index\'s evolution, including its peak during the period when the Taliban entered Kabul. This allows for a more stable and insightful representation of the underlying trends.',
                style={'fontSize': '16px', 'margin': '20px'}),
@@ -88,7 +112,7 @@ forecasting_layout = html.Div([
     html.H2('Select Model Forecasts'),
     dcc.Dropdown(id='forecast-model', options=[{'label': m, 'value': m} for m in models], value='Ensemble', clearable=False, className='dcc-dropdown'),
         # Add text below the plot
-    html.P("The forecast test predictions start from July 2nd, 2021, until August 20th, 2021, in Afghanistan. Each date corresponds to the beginning day of the predicted week.",
+    html.P("The forecast test predictions cover the period from the week starting on July 2, 2021, to the week starting on August 20, 2021, in Afghanistan. Each date represents the first day of the predicted week.",
            style={'fontSize': '16px', 'margin': '20px'}),
     html.Iframe(id='forecast-line-plot',
                 style={'width': '100%', 'height': '1600px'}
